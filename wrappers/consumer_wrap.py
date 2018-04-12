@@ -1,4 +1,3 @@
-import numpy as np
 import redis
 import json
 
@@ -7,14 +6,16 @@ from docopt import docopt
 
 from obnl.core.client import ClientNode
 
+import numpy as np
+
 
 # This doc is used by docopt to make the wrapper callable by command line and gather easily all the given parameters
-doc = """>>> IntegrCiTy wrapper command <<<
+doc = """>>> IntegrCiTy wrapper for power consumer <<<
 
 Usage:
-	wrapper.py (<host> <name> <init>) [--i=TO_SET... --o=TO_GET... --first --cmd=CMD]
-	wrapper.py -h | --help
-	wrapper.py --version
+	consumer_wrap.py (<host> <name> <init>) [--i=TO_SET... --o=TO_GET... --first --cmd=CMD]
+	consumer_wrap.py -h | --help
+	consumer_wrap.py --version
 
 Options
 	-h --help   show this
@@ -41,10 +42,13 @@ class Node(ClientNode):
         self.redis = redis.StrictRedis(host=host, port=6379, db=0)
 
         # Declare model
-        self.a = 0
-        self.b = 0
+        self.loc = 0
+        self.scale = 1.0
 
-        self.c = None
+        self.pf = 0.1
+
+        self.p_kw = 0
+        self.q_kvar = 0
 
         # Set initial values / model parameters
         with open('init_values.json') as json_data:
@@ -74,7 +78,8 @@ class Node(ClientNode):
 
         # Compute intern state
         logging.debug(self.name, "compute new intern state")
-        self.b = self.a + np.random.choice([-1, 1]) * self.c
+        self.p_kw = round(np.random.normal(self.loc, self.scale), 2)
+        self.q_kvar = round(max(0.0, self.p_kw * self.pf), 2)
 
         # Send updated output attributes
         logging.debug(self.name, "outputs", {key: getattr(self, key) for key in self.output_attributes})
